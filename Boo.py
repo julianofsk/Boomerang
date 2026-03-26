@@ -57,15 +57,17 @@ st.sidebar.write(f"👤 {st.session_state['usuario']}")
 # BANCO
 # -----------------------------
 def get_data():
-    if "DB_HOST" not in st.secrets:
+    if "DATABASE" not in st.secrets:
         st.error("Banco não configurado nos secrets.")
         st.stop()
 
+    db = st.secrets["DATABASE"]
+
     conn = psycopg2.connect(
-        host=st.secrets["DATABASE"]["DB_HOST"],
-        database=st.secrets["DATABASE"]["DB_NAME"],
-        user=st.secrets["DATABASE"]["DB_USER"],
-        password=st.secrets["DATABASE"]["DB_PASSWORD"]
+        host=db["DB_HOST"],
+        database=db["DB_NAME"],
+        user=db["DB_USER"],
+        password=db["DB_PASSWORD"]
     )
 
     query = """
