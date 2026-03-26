@@ -164,7 +164,7 @@ df_credito_dia = df_credito_dia.sort_values("data")
 # -----------------------------
 # LAYOUT
 # -----------------------------
-st.title("Dashboard Loja Infantil")
+st.title("Boomerang Kids")
 st.subheader(f"📅 Data: {data_selecionada}")
 
 # -----------------------------
@@ -174,7 +174,7 @@ fig_gauge = go.Figure(go.Indicator(
     mode="gauge+number+delta",
     value=total_dia,
     delta={"reference": meta_dia},
-    title={"text": "Meta do Dia (Dinheiro)"},
+    title={"text": "Meta do Dia"},
     gauge={"axis": {"range": [None, meta_dia]}}
 ))
 
