@@ -62,10 +62,10 @@ def get_data():
         st.stop()
 
     conn = psycopg2.connect(
-        host=st.secrets["DB_HOST"],
-        database=st.secrets["DB_NAME"],
-        user=st.secrets["DB_USER"],
-        password=st.secrets["DB_PASSWORD"]
+        host=st.secrets["DATABASE"]["DB_HOST"],
+        database=st.secrets["DATABASE"]["DB_NAME"],
+        user=st.secrets["DATABASE"]["DB_USER"],
+        password=st.secrets["DATABASE"]["DB_PASSWORD"]
     )
 
     query = """
