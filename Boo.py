@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
@@ -7,9 +8,13 @@ from datetime import datetime
 import calendar
 
 # -----------------------------
+# AUTO REFRESH (1 minuto)
+# -----------------------------
+st_autorefresh(interval=60 * 1000, key="refresh")
+
+# -----------------------------
 # LOGIN
 # -----------------------------
-
 def login():
     st.title("Login")
 
@@ -17,8 +22,11 @@ def login():
     password = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if user == "admin" and password == "1234":
+        users = st.secrets["USERS"]
+
+        if user in users and users[user] == password:
             st.session_state["logado"] = True
+            st.session_state["usuario"] = user
         else:
             st.error("Usuário ou senha inválidos")
 
@@ -30,9 +38,13 @@ if not st.session_state["logado"]:
     st.stop()
 
 # -----------------------------
+# USUÁRIO LOGADO
+# -----------------------------
+st.sidebar.write(f"👤 {st.session_state['usuario']}")
+
+# -----------------------------
 # CONEXÃO BANCO
 # -----------------------------
-
 def get_data():
     conn = psycopg2.connect(
         host=st.secrets["DB_HOST"],
@@ -56,9 +68,8 @@ df = get_data()
 df["emissao"] = pd.to_datetime(df["emissao"])
 
 # -----------------------------
-# SIDEBAR
+# SIDEBAR CONFIG
 # -----------------------------
-
 st.sidebar.title("Configurações")
 
 data_selecionada = st.sidebar.date_input(
@@ -73,26 +84,23 @@ meta_dia = st.sidebar.number_input("Meta do Dia", value=8000)
 # -----------------------------
 # IDS
 # -----------------------------
-
 ids_dinheiro = [1,2,3,6,7,8]
 ids_credito = [10]
 
 # -----------------------------
 # FILTRO DIA
 # -----------------------------
-
 df_dia = df[df["emissao"].dt.date == data_selecionada]
 
 vendas_dinheiro = df_dia[df_dia["idcobranca"].isin(ids_dinheiro)]["valor"].sum()
 vendas_credito = df_dia[df_dia["idcobranca"].isin(ids_credito)]["valor"].sum()
 
-# ⚠️ TOTAL DO DIA AGORA É SÓ DINHEIRO
+# faturamento real = dinheiro
 total_dia = vendas_dinheiro
 
 # -----------------------------
 # FILTRO MÊS
 # -----------------------------
-
 ano = data_selecionada.year
 mes = data_selecionada.month
 
@@ -102,9 +110,8 @@ df_mes = df[
 ]
 
 # -----------------------------
-# DIAS ÚTEIS
+# DIAS ÚTEIS (SEG-SÁB)
 # -----------------------------
-
 cal = calendar.monthcalendar(ano, mes)
 
 dias_uteis = sum(
@@ -115,13 +122,12 @@ dias_uteis = sum(
 meta_mensal = meta_dia * dias_uteis
 
 # -----------------------------
-# AGRUPAMENTO DIÁRIO
+# AGRUPAMENTOS
 # -----------------------------
-
 df_dinheiro = df_mes[df_mes["idcobranca"].isin(ids_dinheiro)]
 df_credito = df_mes[df_mes["idcobranca"].isin(ids_credito)]
 
-# dinheiro
+# dinheiro diário
 df_dinheiro_dia = df_dinheiro.groupby(df_dinheiro["emissao"].dt.date)["valor"].sum().reset_index()
 df_dinheiro_dia.columns = ["data", "valor"]
 df_dinheiro_dia = df_dinheiro_dia.sort_values("data")
@@ -131,7 +137,7 @@ df_dinheiro_dia["meta_acumulada"] = [
     meta_dia * (i+1) for i in range(len(df_dinheiro_dia))
 ]
 
-# crédito
+# crédito diário
 df_credito_dia = df_credito.groupby(df_credito["emissao"].dt.date)["valor"].sum().reset_index()
 df_credito_dia.columns = ["data", "valor"]
 df_credito_dia = df_credito_dia.sort_values("data")
@@ -139,28 +145,25 @@ df_credito_dia = df_credito_dia.sort_values("data")
 # -----------------------------
 # LAYOUT
 # -----------------------------
-
-st.title("Boomerang Kids")
+st.title("Dashboard Loja Infantil")
 st.subheader(f"📅 Data: {data_selecionada}")
 
 # -----------------------------
-# GAUGE META DIA (DINHEIRO)
+# GAUGE META DIA
 # -----------------------------
-
 fig_gauge = go.Figure(go.Indicator(
     mode="gauge+number+delta",
     value=total_dia,
     delta={"reference": meta_dia},
-    title={"text": "Meta do Dia"},
+    title={"text": "Meta do Dia (Dinheiro)"},
     gauge={"axis": {"range": [None, meta_dia]}}
 ))
 
 st.plotly_chart(fig_gauge, width="stretch")
 
 # -----------------------------
-# PIZZA (COMPARAÇÃO)
+# PIZZA
 # -----------------------------
-
 fig_pizza = px.pie(
     names=["Dinheiro","Crédito Loja"],
     values=[vendas_dinheiro, vendas_credito],
@@ -170,9 +173,8 @@ fig_pizza = px.pie(
 st.plotly_chart(fig_pizza, width="stretch")
 
 # -----------------------------
-# FATURAMENTO DINHEIRO
+# GRÁFICO DINHEIRO
 # -----------------------------
-
 fig_dinheiro = px.bar(
     df_dinheiro_dia,
     x="data",
@@ -183,9 +185,8 @@ fig_dinheiro = px.bar(
 st.plotly_chart(fig_dinheiro, width="stretch")
 
 # -----------------------------
-# FATURAMENTO CRÉDITO
+# GRÁFICO CRÉDITO
 # -----------------------------
-
 fig_credito = px.bar(
     df_credito_dia,
     x="data",
@@ -196,15 +197,14 @@ fig_credito = px.bar(
 st.plotly_chart(fig_credito, width="stretch")
 
 # -----------------------------
-# EVOLUÇÃO META (SÓ DINHEIRO)
+# EVOLUÇÃO META
 # -----------------------------
-
 fig_meta = go.Figure()
 
 fig_meta.add_trace(go.Scatter(
     x=df_dinheiro_dia["data"],
     y=df_dinheiro_dia["acumulado"],
-    name="Faturamento (Dinheiro)"
+    name="Faturamento"
 ))
 
 fig_meta.add_trace(go.Scatter(
@@ -213,16 +213,15 @@ fig_meta.add_trace(go.Scatter(
     name="Meta"
 ))
 
-fig_meta.update_layout(title="Evolução Meta Mensal")
+fig_meta.update_layout(title="Evolução Meta Mensal (Dinheiro)")
 
 st.plotly_chart(fig_meta, width="stretch")
 
 # -----------------------------
 # KPIs
 # -----------------------------
-
 col1, col2, col3 = st.columns(3)
 
-col1.metric("Faturamento Dia", f"R$ {total_dia:,.0f}")
+col1.metric("Faturamento Dia (Dinheiro)", f"R$ {total_dia:,.0f}")
 col2.metric("Crédito no Dia", f"R$ {vendas_credito:,.0f}")
 col3.metric("Meta Mensal", f"R$ {meta_mensal:,.0f}")
