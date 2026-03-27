@@ -5,19 +5,6 @@ import plotly.express as px
 import psycopg2
 from datetime import datetime
 import calendar
-import time
-
-# -----------------------------
-# AUTO REFRESH
-# -----------------------------
-REFRESH_TIME = 60
-
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
-
-if time.time() - st.session_state.last_refresh > REFRESH_TIME:
-    st.session_state.last_refresh = time.time()
-    st.rerun()
 
 # -----------------------------
 # LOGIN
@@ -49,9 +36,25 @@ if not st.session_state["logado"]:
     st.stop()
 
 # -----------------------------
-# USUÁRIO LOGADO
+# AUTO REFRESH (FUNCIONAL)
 # -----------------------------
+st.markdown(
+    """
+    <script>
+        setTimeout(function(){
+            window.location.reload();
+        }, 60000);
+    </script>
+    """,
+    unsafe_allow_html=True
+)
+
+# -----------------------------
+# ÚLTIMA ATUALIZAÇÃO
+# -----------------------------
+agora = datetime.now()
 st.sidebar.write(f"👤 {st.session_state['usuario']}")
+st.sidebar.caption(f"⏱ Atualizado às: {agora.strftime('%H:%M:%S')}")
 
 # -----------------------------
 # BANCO
@@ -216,6 +219,8 @@ fig_meta.add_trace(go.Scatter(
     y=df_dinheiro_dia["meta_acumulada"],
     name="Meta"
 ))
+
+fig_meta.update_layout(title="Evolução da Meta Mensal")
 
 st.plotly_chart(fig_meta, width="stretch")
 
