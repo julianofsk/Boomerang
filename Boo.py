@@ -1,10 +1,12 @@
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import psycopg2
 from datetime import datetime
 import calendar
+import pytz
 
 # -----------------------------
 # LOGIN
@@ -36,23 +38,19 @@ if not st.session_state["logado"]:
     st.stop()
 
 # -----------------------------
-# AUTO REFRESH (FUNCIONAL)
+# AUTO REFRESH (FUNCIONA)
 # -----------------------------
-st.markdown(
-    """
-    <script>
-        setTimeout(function(){
-            window.location.reload();
-        }, 60000);
-    </script>
-    """,
-    unsafe_allow_html=True
-)
+st_autorefresh(interval=60 * 1000, key="auto_refresh")
 
 # -----------------------------
-# ÚLTIMA ATUALIZAÇÃO
+# HORÁRIO BRASIL
 # -----------------------------
-agora = datetime.now()
+tz = pytz.timezone("America/Sao_Paulo")
+agora = datetime.now(tz)
+
+# -----------------------------
+# SIDEBAR
+# -----------------------------
 st.sidebar.write(f"👤 {st.session_state['usuario']}")
 st.sidebar.caption(f"⏱ Atualizado às: {agora.strftime('%H:%M:%S')}")
 
@@ -93,13 +91,13 @@ if df.empty:
 df["emissao"] = pd.to_datetime(df["emissao"])
 
 # -----------------------------
-# SIDEBAR
+# SIDEBAR CONFIG
 # -----------------------------
 st.sidebar.title("Configurações")
 
 data_selecionada = st.sidebar.date_input(
     "Selecionar Data",
-    value=datetime.today()
+    value=datetime.now(tz)
 )
 
 data_selecionada = pd.to_datetime(data_selecionada).date()
@@ -146,7 +144,7 @@ dias_uteis = sum(
 meta_mensal = meta_dia * dias_uteis
 
 # -----------------------------
-# AGRUPAMENTO
+# AGRUPAMENTOS
 # -----------------------------
 df_dinheiro = df_mes[df_mes["idcobranca"].isin(ids_dinheiro)]
 df_credito = df_mes[df_mes["idcobranca"].isin(ids_credito)]
